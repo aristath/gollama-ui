@@ -1,6 +1,7 @@
 # Binaries
 gollama-ui
-server
+gollama-ui-arm64
+/server$
 *.exe
 *.exe~
 *.dll
