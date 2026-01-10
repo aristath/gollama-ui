@@ -12,18 +12,20 @@ import (
 
 // Server holds the HTTP server and dependencies
 type Server struct {
-	router      *chi.Mux
+	router        *chi.Mux
 	modelsHandler *handlers.ModelsHandler
 	chatHandler   *handlers.ChatHandler
-	staticDir   string
+	unloadHandler *handlers.UnloadHandler
+	staticDir     string
 }
 
 // New creates a new server instance
-func New(modelsHandler *handlers.ModelsHandler, chatHandler *handlers.ChatHandler, staticDir string) *Server {
+func New(modelsHandler *handlers.ModelsHandler, chatHandler *handlers.ChatHandler, unloadHandler *handlers.UnloadHandler, staticDir string) *Server {
 	s := &Server{
 		router:        chi.NewRouter(),
 		modelsHandler: modelsHandler,
 		chatHandler:   chatHandler,
+		unloadHandler: unloadHandler,
 		staticDir:     staticDir,
 	}
 
@@ -53,7 +55,9 @@ func (s *Server) setupMiddleware() {
 // setupRoutes configures all routes
 func (s *Server) setupRoutes() {
 	// API routes - must be registered before catch-all
+	// Order matters: more specific routes first
 	s.router.Route("/api", func(r chi.Router) {
+		r.Post("/models/{model}/unload", s.unloadHandler.Unload)
 		r.Get("/models", s.modelsHandler.List)
 		r.Post("/chat", s.chatHandler.Stream)
 	})

@@ -67,6 +67,31 @@ header h1 {
     border-color: #0066cc;
 }
 
+.model-selector button {
+    padding: 0.5rem 1rem;
+    background: #cc0000;
+    border: 1px solid #aa0000;
+    border-radius: 6px;
+    color: white;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.model-selector button:hover:not(:disabled) {
+    background: #aa0000;
+}
+
+.model-selector button:active:not(:disabled) {
+    background: #880000;
+}
+
+.model-selector button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .chat-container {
     flex: 1;
     display: flex;

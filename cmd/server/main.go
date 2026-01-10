@@ -41,9 +41,10 @@ func main() {
 	// Initialize handlers
 	modelsHandler := handlers.NewModelsHandler(ollamaClient)
 	chatHandler := handlers.NewChatHandler(ollamaClient)
+	unloadHandler := handlers.NewUnloadHandler(ollamaClient)
 
 	// Create server
-	srv := server.New(modelsHandler, chatHandler, absStaticDir)
+	srv := server.New(modelsHandler, chatHandler, unloadHandler, absStaticDir)
 
 	// Start HTTP server
 	addr := fmt.Sprintf("%s:%s", *host, *port)

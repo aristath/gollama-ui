@@ -151,3 +151,27 @@ func (c *Client) ChatStream(ctx context.Context, req ChatRequest) (<-chan ChatRe
 
 	return ourResponseChan, nil
 }
+
+// UnloadModel unloads a model from memory by setting keep_alive to 0
+func (c *Client) UnloadModel(ctx context.Context, modelName string) error {
+	// Create a context with timeout to prevent hanging
+	unloadCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	// Use Generate endpoint with minimal prompt and keep_alive: 0 to unload the model
+	// This will load the model if not loaded, generate a minimal response, then unload it
+	keepAlive := 0
+	req := &ollama.GenerateRequest{
+		Model:     modelName,
+		Prompt:    " ", // Minimal prompt - we ignore the response
+		KeepAlive: keepAlive,
+	}
+
+	// Make the request - we don't care about the response, just that it unloads the model
+	_, err := c.ollamaClient.Generate(unloadCtx, req)
+	if err != nil {
+		return fmt.Errorf("failed to unload model %s: %w", modelName, err)
+	}
+
+	return nil
+}
