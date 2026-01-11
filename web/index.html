@@ -9,15 +9,111 @@
 <body>
     <div class="container">
         <header>
-            <h1>Ollama Chat</h1>
+            <h1>Gollama Chat</h1>
             <div class="model-selector">
-                <label for="model-select">Model:</label>
-                <select id="model-select">
-                    <option value="">Loading models...</option>
-                </select>
+                <div class="model-dropdown">
+                    <label for="model-select">Current Model:</label>
+                    <select id="model-select">
+                        <option value="">Loading models...</option>
+                    </select>
+                </div>
+                <button id="switch-model-btn" title="Switch to a different model">⚙️ Switch</button>
                 <button id="unload-button" disabled title="Unload model from memory">Unload</button>
+                <button id="settings-btn" title="Manage RSS feeds and settings">⚙️ Settings</button>
             </div>
         </header>
+
+        <div id="model-switcher" class="model-switcher hidden">
+            <div class="switcher-header">
+                <h3>Available Models</h3>
+                <button id="switcher-close" class="close-btn">✕</button>
+            </div>
+            <div id="available-models-list" class="models-list">
+                <p>Loading available models...</p>
+            </div>
+            <div id="loading-indicator" class="loading-indicator hidden">
+                <div class="loading-content">
+                    <p class="loading-message">Loading model...</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <p class="loading-timer">0s elapsed</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings-panel" class="settings-panel hidden">
+            <div class="settings-header">
+                <h3>Settings</h3>
+                <button id="settings-close" class="close-btn">✕</button>
+            </div>
+            <div class="settings-content">
+                <div class="settings-section">
+                    <h4>Chat Timeout</h4>
+                    <p class="settings-hint">Set how long to wait for chat responses. Use format: 5m, 1h, 30m, 72h, etc.</p>
+                    <div class="timeout-control">
+                        <label for="chat-timeout-input">Timeout:</label>
+                        <input type="text" id="chat-timeout-input" placeholder="5m" class="timeout-input" />
+                        <span id="timeout-display" class="timeout-display"></span>
+                    </div>
+                    <div class="settings-buttons">
+                        <button id="timeout-save-btn" class="btn-primary">Save Timeout</button>
+                    </div>
+                    <div id="timeout-status" class="settings-status"></div>
+                </div>
+                <div class="settings-section">
+                    <h4>Tool Settings</h4>
+                    <p class="settings-hint">Enable or disable tools for the model to use</p>
+                    <div class="tool-toggles">
+                        <div class="tool-toggle">
+                            <label for="tool-web-search">
+                                <input type="checkbox" id="tool-web-search" />
+                                <span class="toggle-label">🔍 Web Search</span>
+                            </label>
+                            <p class="toggle-description">Allow model to search the web for current information</p>
+                        </div>
+                        <div class="tool-toggle">
+                            <label for="tool-feeds">
+                                <input type="checkbox" id="tool-feeds" />
+                                <span class="toggle-label">📰 News Feeds</span>
+                            </label>
+                            <p class="toggle-description">Allow model to read articles from configured RSS feeds</p>
+                        </div>
+                        <div class="tool-toggle">
+                            <label for="tool-sentinel">
+                                <input type="checkbox" id="tool-sentinel" />
+                                <span class="toggle-label">📊 Portfolio Analysis</span>
+                            </label>
+                            <p class="toggle-description">Allow model to analyze Sentinel portfolio data and suggest trading actions</p>
+                        </div>
+                    </div>
+                    <div id="tools-status" class="settings-status"></div>
+                </div>
+                <div class="settings-section">
+                    <h4>Custom RSS Feeds</h4>
+                    <p class="settings-hint">Add custom RSS feed URLs (newline or comma separated). Use format: <code>topic_name=https://example.com/feed.xml</code></p>
+                    <textarea
+                        id="feeds-input"
+                        class="feeds-textarea"
+                        placeholder="crypto=https://feed.url/crypto.xml&#10;blockchain=https://feed.url/blockchain.xml"
+                        rows="10"
+                    ></textarea>
+                    <div class="settings-buttons">
+                        <button id="feeds-save-btn" class="btn-primary">Save Feeds</button>
+                        <button id="feeds-reset-btn" class="btn-secondary">Reset to Defaults</button>
+                    </div>
+                    <div id="feeds-status" class="settings-status"></div>
+                </div>
+                <div class="settings-section">
+                    <h4>Current Feeds</h4>
+                    <div id="feeds-list" class="feeds-list">
+                        <p>Loading feeds...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="status-message" class="status-message hidden"></div>
 
         <div class="chat-container">
             <div id="messages" class="messages"></div>
