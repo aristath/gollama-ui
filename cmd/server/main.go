@@ -99,8 +99,8 @@ func main() {
 
 	// Initialize model manager for model switching
 	manager := modelmanager.New(
-		"/llm/models",                // Models directory
-		"/llm/llama-server.conf",     // Config file path
+		"/mnt/nvme/llm/models",                // Models directory
+		"/mnt/nvme/llm/config/llama-server.conf",     // Config file path
 		*ollamaURL,                    // Base URL for health checks
 	)
 	loadHandler := handlers.NewLoadHandler(manager)
