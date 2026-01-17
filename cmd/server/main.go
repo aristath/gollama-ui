@@ -25,7 +25,7 @@ func main() {
 		sentinelURL = flag.String("sentinel", "http://localhost:8081", "Sentinel portfolio API URL")
 		staticDir   = flag.String("static", "./web", "Static files directory")
 		configDir   = flag.String("config", "./config", "Configuration directory")
-		chatTimeout = flag.Duration("chat-timeout", 5*time.Minute, "Chat request timeout (e.g., 5m, 10m, 30m)")
+		chatTimeout = flag.Duration("chat-timeout", 24*time.Hour, "Chat request timeout (e.g., 1h, 24h, 48h) - default 24h for slow hardware like RPi")
 	)
 	flag.Parse()
 
