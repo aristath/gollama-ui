@@ -166,19 +166,14 @@ func (c *Client) ChatStream(ctx context.Context, req ChatRequest) (<-chan ChatRe
 	openAIReq := map[string]interface{}{
 		"model":    req.Model,
 		"messages": req.Messages,
+		"stream":   true,
 	}
 
-	// Note: llama.cpp server does NOT support streaming with tools together.
-	// When tools are provided, we must disable streaming to allow function calling.
+	// Note: llama.cpp server does NOT support the tools parameter with any model.
+	// Sending tools causes the server to close the connection (exit 52).
+	// Tools are not sent to the backend. Instead, they are handled at the
+	// application layer in gollama-ui if needed for future use or model upgrades.
 	// See: https://github.com/ggml-org/llama.cpp/discussions/12601
-	// This is acceptable because the chat handler already manages multi-round
-	// conversations for tool execution via executeAndContinue().
-	if len(req.Tools) > 0 {
-		openAIReq["stream"] = false
-		openAIReq["tools"] = req.Tools
-	} else {
-		openAIReq["stream"] = true
-	}
 
 	body, err := json.Marshal(openAIReq)
 	if err != nil {
@@ -221,101 +216,67 @@ func (c *Client) ChatStream(ctx context.Context, req ChatRequest) (<-chan ChatRe
 		defer close(responseChan)
 		defer resp.Body.Close()
 
-		// Check if response is streaming (SSE format) or non-streaming JSON
-		contentType := resp.Header.Get("Content-Type")
-		isStreaming := strings.Contains(contentType, "event-stream")
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			line := scanner.Text()
 
-		if isStreaming {
-			// Handle Server-Sent Events format (when stream: true)
-			scanner := bufio.NewScanner(resp.Body)
-			for scanner.Scan() {
-				line := scanner.Text()
-
-				// Skip empty lines
-				if line == "" {
-					continue
-				}
-
-				// Check for [DONE] marker
-				if line == "data: [DONE]" {
-					responseChan <- ChatResponse{
-						Model: req.Model,
-						Done:  true,
-					}
-					return
-				}
-
-				// Parse Server-Sent Events format
-				if !strings.HasPrefix(line, "data: ") {
-					continue
-				}
-
-				jsonStr := strings.TrimPrefix(line, "data: ")
-				var chunk OpenAIChatChunk
-				if err := json.Unmarshal([]byte(jsonStr), &chunk); err != nil {
-					responseChan <- ChatResponse{
-						Model: req.Model,
-						Done:  true,
-						Error: fmt.Sprintf("failed to parse chunk: %v", err),
-					}
-					return
-				}
-
-				// Extract content from choices
-				if len(chunk.Choices) > 0 {
-					choice := chunk.Choices[0]
-
-					responseChan <- ChatResponse{
-						Model: chunk.Model,
-						Message: ChatMessage{
-							Role:      choice.Delta.Role,
-							Content:   choice.Delta.Content,
-							ToolCalls: choice.Delta.ToolCalls,
-						},
-						Done:       choice.FinishReason != nil,
-						DoneReason: func() string { if choice.FinishReason != nil { return *choice.FinishReason } ; return "" }(),
-					}
-
-					// If finished, return
-					if choice.FinishReason != nil {
-						return
-					}
-				}
+			// Skip empty lines
+			if line == "" {
+				continue
 			}
 
-			if err := scanner.Err(); err != nil {
+			// Check for [DONE] marker
+			if line == "data: [DONE]" {
 				responseChan <- ChatResponse{
 					Model: req.Model,
 					Done:  true,
-					Error: fmt.Sprintf("scanner error: %v", err),
 				}
+				return
 			}
-		} else {
-			// Handle non-streaming JSON response (when stream: false, typically for tool calls)
-			var response OpenAIChatChunk
-			if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+
+			// Parse Server-Sent Events format
+			if !strings.HasPrefix(line, "data: ") {
+				continue
+			}
+
+			jsonStr := strings.TrimPrefix(line, "data: ")
+			var chunk OpenAIChatChunk
+			if err := json.Unmarshal([]byte(jsonStr), &chunk); err != nil {
 				responseChan <- ChatResponse{
 					Model: req.Model,
 					Done:  true,
-					Error: fmt.Sprintf("failed to parse response: %v", err),
+					Error: fmt.Sprintf("failed to parse chunk: %v", err),
 				}
 				return
 			}
 
 			// Extract content from choices
-			if len(response.Choices) > 0 {
-				choice := response.Choices[0]
+			if len(chunk.Choices) > 0 {
+				choice := chunk.Choices[0]
 
 				responseChan <- ChatResponse{
-					Model: response.Model,
+					Model: chunk.Model,
 					Message: ChatMessage{
 						Role:      choice.Delta.Role,
 						Content:   choice.Delta.Content,
 						ToolCalls: choice.Delta.ToolCalls,
 					},
-					Done:       true,
+					Done:       choice.FinishReason != nil,
 					DoneReason: func() string { if choice.FinishReason != nil { return *choice.FinishReason } ; return "" }(),
 				}
+
+				// If finished, return
+				if choice.FinishReason != nil {
+					return
+				}
+			}
+		}
+
+		if err := scanner.Err(); err != nil {
+			responseChan <- ChatResponse{
+				Model: req.Model,
+				Done:  true,
+				Error: fmt.Sprintf("scanner error: %v", err),
 			}
 		}
 	}()
